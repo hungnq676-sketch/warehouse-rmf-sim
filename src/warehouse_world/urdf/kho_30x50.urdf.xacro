@@ -1,0 +1,196 @@
+<?xml version="1.0"?>
+<!--
+  KHO 30m x 50m (phong cach AWS small warehouse)
+  Goc toa do o tam kho, X: Tay -> Dong (30 m), Y: Nam -> Bac (50 m).
+
+   y=+25 +============================================+
+         | [van phong]   [hang nhap]    [lo cap hang] |
+         |  ban, nguoi    pallet         \  BANG TAI  |
+         |                                \ DOC XUONG |
+         | ===== lan robot ngang Bac ============== o |  o = diem nhan hang
+         | ..... loi di nguoi ngang Bac ............. |
+         | K | HL1 | KK | HL2 | KK | HL3 | K |:|RR| C  C |
+         | e |     | ee |     | ee |     | e |:|RR| h  h |
+         | -   (3 hanh lang lay hang)        |:|RR| o  o |  :  = loi di nguoi
+         |                                   |:|RR| n  n |  RR = lan robot chinh
+         | ..... loi di nguoi ngang Nam ......|:|RR| g  g |  Chong = khu chong hang
+         | ===== lan robot ngang Nam ==============       |
+         | [sac 1]      ban dong goi     :|RR|  [xuat]   |
+         | [sac 2]      + nhan vien      :|RR|  pallet   |
+         | [sac 3]                       :|RR|           |
+   y=-25 +==============================[  CUA  ]=======+
+       x=-15                                         x=+15
+-->
+<robot name="kho_30x50" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- false khi dung world co nhan vien di lai (actor) de khong bi trung nguoi -->
+  <xacro:arg name="static_walkers" default="true"/>
+
+  <xacro:include filename="$(find warehouse_world)/urdf/warehouse_macros.xacro"/>
+  <xacro:include filename="$(find warehouse_world)/urdf/kho_macros.xacro"/>
+
+  <!-- ===== Kich thuoc ===== -->
+  <xacro:property name="size_x" value="30.0"/>
+  <xacro:property name="size_y" value="50.0"/>
+  <xacro:property name="hx"     value="${size_x/2}"/>
+  <xacro:property name="hy"     value="${size_y/2}"/>
+  <xacro:property name="wall_t" value="0.2"/>
+  <xacro:property name="wall_h" value="7.0"/>
+
+  <!-- Ke (dung boi rack_bay trong warehouse_macros.xacro) -->
+  <xacro:property name="bay_length"  value="2.7"/>
+  <xacro:property name="rack_height" value="4.6"/>
+  <xacro:property name="rack_d"      value="1.1"/>
+  <xacro:property name="rack_y0"     value="-9.0"/>
+  <xacro:property name="rack_bays"   value="8"/>     <!-- 8 x 2.7 = 21.6 m -->
+
+  <!-- Bang tai doc -->
+  <xacro:property name="conv_x"    value="12.6"/>
+  <xacro:property name="conv_y_lo" value="17.8"/>   <!-- dau thap (robot nhan hang) -->
+  <xacro:property name="conv_y_hi" value="24.3"/>   <!-- dau cao (sat tuong Bac) -->
+  <xacro:property name="conv_z_lo" value="0.35"/>
+  <xacro:property name="conv_z_hi" value="1.3"/>
+  <xacro:property name="conv_w"    value="0.8"/>
+
+  <gazebo>
+    <static>true</static>
+  </gazebo>
+
+  <!-- ================================================================ -->
+  <!-- SAN + TUONG + 1 CUA                                               -->
+  <!-- ================================================================ -->
+  <link name="warehouse_floor">
+    <visual>
+      <origin xyz="0 0 -0.05"/>
+      <geometry><box size="${size_x} ${size_y} 0.1"/></geometry>
+      <xacro:mat n="concrete"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05"/>
+      <geometry><box size="${size_x} ${size_y} 0.1"/></geometry>
+    </collision>
+    <xacro:dummy_inertial/>
+  </link>
+
+  <xacro:wall name="wall_north" x="0" y="${ hy - wall_t/2}" sx="${size_x}" sy="${wall_t}" h="${wall_h}"/>
+  <xacro:wall name="wall_east"  x="${ hx - wall_t/2}" y="0" sx="${wall_t}" sy="${size_y - 2*wall_t}" h="${wall_h}"/>
+  <xacro:wall name="wall_west"  x="${-hx + wall_t/2}" y="0" sx="${wall_t}" sy="${size_y - 2*wall_t}" h="${wall_h}"/>
+  <!-- Tuong Nam co 1 cua rong 6 m (x tu 1.3 den 7.3), cao 4.5 m -->
+  <xacro:wall name="wall_south_w" x="-6.85" y="${-hy + wall_t/2}" sx="16.3" sy="${wall_t}" h="${wall_h}"/>
+  <xacro:wall name="wall_south_e" x="11.15" y="${-hy + wall_t/2}" sx="7.7"  sy="${wall_t}" h="${wall_h}"/>
+  <xacro:static_box name="door_lintel" x="4.3" y="${-hy + wall_t/2}" sx="6.0" sy="${wall_t}"
+                    sz="${wall_h - 4.5}" z="4.5" mat="wall_white"/>
+  <xacro:hazard name="door_hazard" x="4.3" y="${-hy + wall_t + 0.1}" length="6.0" w="0.2"/>
+
+  <!-- ================================================================ -->
+  <!-- KE HANG: 4 day theo truc Y -> 3 hanh lang lay hang (rong 3 m)     -->
+  <!-- ================================================================ -->
+  <xacro:rack_row_y prefix="rack_1"  n="${rack_bays}" x="-14.2" y_start="${rack_y0}" depth="${rack_d}" seed="0"/>
+  <xacro:rack_row_y prefix="rack_2a" n="${rack_bays}" x="-10.1" y_start="${rack_y0}" depth="${rack_d}" seed="1"/>
+  <xacro:rack_row_y prefix="rack_2b" n="${rack_bays}" x="-8.9"  y_start="${rack_y0}" depth="${rack_d}" seed="2"/>
+  <xacro:rack_row_y prefix="rack_3a" n="${rack_bays}" x="-4.8"  y_start="${rack_y0}" depth="${rack_d}" seed="3"/>
+  <xacro:rack_row_y prefix="rack_3b" n="${rack_bays}" x="-3.6"  y_start="${rack_y0}" depth="${rack_d}" seed="4"/>
+  <xacro:rack_row_y prefix="rack_4"  n="${rack_bays}" x="0.5"   y_start="${rack_y0}" depth="${rack_d}" seed="5"/>
+
+  <!-- ================================================================ -->
+  <!-- LAN ROBOT (nen xanh duong) CANH LOI DI NGUOI (nen xanh la)        -->
+  <!-- ================================================================ -->
+  <xacro:robot_lane name="rlane_south"      x0="-13.0" x1="11.8" y0="-13.4" y1="-10.8"/>
+  <xacro:robot_lane name="rlane_north"      x0="-13.0" x1="13.4" y0="14.5"  y1="17.1"/>
+  <xacro:robot_lane name="rlane_main"       x0="3.0"   x1="6.6"  y0="-10.8" y1="14.5"/>
+  <xacro:robot_lane name="rlane_main_south" x0="3.0"   x1="6.6"  y0="-24.8" y1="-13.4"/>
+  <xacro:robot_lane name="rlane_east"       x0="10.0"  x1="12.0" y0="-10.8" y1="14.5"/>
+
+  <xacro:walkway name="walk_main"  x0="1.4"   x1="2.6"  y0="-24.8" y1="13.0"/>
+  <xacro:walkway name="walk_north" x0="-14.6" x1="14.6" y0="13.0"  y1="14.2"/>
+  <xacro:walkway name="walk_south" x0="-14.6" x1="1.4"  y0="-10.4" y1="-9.2"/>
+
+  <!-- Vach qua duong noi loi di nguoi cat duong robot -->
+  <xacro:zebra name="zebra_main_s"  x="2.0"    y="-12.1" along="y" span="2.6" w="1.2"/>
+  <xacro:zebra name="zebra_s_a1"    x="-12.15" y="-9.8"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_s_a2"    x="-6.85"  y="-9.8"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_s_a3"    x="-1.55"  y="-9.8"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_n_a1"    x="-12.15" y="13.6"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_n_a2"    x="-6.85"  y="13.6"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_n_a3"    x="-1.55"  y="13.6"  along="x" span="2.0" w="1.2"/>
+  <xacro:zebra name="zebra_n_main"  x="4.8"    y="13.6"  along="x" span="3.6" w="1.2"/>
+  <xacro:zebra name="zebra_n_east"  x="11.0"   y="13.6"  along="x" span="2.0" w="1.2"/>
+
+  <!-- Vach dan duong + diem dung, ve tu config/kho_30x50_paths.yaml -->
+  <xacro:property name="paths"
+                  value="${xacro.load_yaml('$(find warehouse_world)/config/kho_30x50_paths.yaml')}"/>
+  <xacro:path_edges/>
+  <xacro:path_nodes names="${python.sorted(paths['nodes'].keys())}"/>
+
+  <!-- ================================================================ -->
+  <!-- GOC DONG BAC: BANG TAI DOC XUONG GAN MAT DAT                      -->
+  <!-- ================================================================ -->
+  <xacro:incline_conveyor_frame x="${conv_x}" y_lo="${conv_y_lo}" y_hi="${conv_y_hi}"
+                                z_lo="${conv_z_lo}" z_hi="${conv_z_hi}" width="${conv_w}"/>
+  <xacro:hazard name="conv_hazard_w" x="11.95" y="21.2" length="6.9" yaw="${pi/2}"/>
+  <xacro:hazard name="conv_hazard_s" x="12.75" y="17.5" length="1.5"/>
+  <xacro:worker name="worker_conveyor" x="11.4" y="23.6" yaw="0" vest="hivis_orange"/>
+
+  <!-- ================================================================ -->
+  <!-- KHU CHONG HANG PHIA DONG (2 cot, lan robot o giua x = 11)         -->
+  <!-- O trong (pallet trong) tai chi so 3, 6, 9 = diem stack_1..3       -->
+  <!-- ================================================================ -->
+  <xacro:stack_column prefix="stack_w" x="8.6"  y0="-8.2" n="13" step="1.6" empty="${[3, 6, 9]}" seed="1"/>
+  <xacro:stack_column prefix="stack_e" x="13.4" y0="-8.2" n="13" step="1.6" empty="${[3, 6, 9]}" seed="2"/>
+
+  <!-- ================================================================ -->
+  <!-- KHU PHIA NAM: 4 TRAM SAC, DONG GOI, XUAT HANG                     -->
+  <!-- ================================================================ -->
+  <xacro:charger name="charger_1" x="-13.9" y="-16.0"/>
+  <xacro:charger name="charger_2" x="-13.9" y="-19.0"/>
+  <xacro:charger name="charger_3" x="-13.9" y="-22.0"/>
+  <xacro:charger name="charger_4" x="-13.9" y="-24.0"/>
+  <xacro:hazard name="charge_hazard" x="-13.15" y="-19.9" length="9.6" yaw="${pi/2}"/>
+
+  <xacro:desk name="pack_desk_1" x="-5.4" y="-18.5" yaw="${pi}"/>
+  <xacro:desk name="pack_desk_2" x="-2.6" y="-18.5" yaw="${pi}"/>
+  <xacro:worker name="worker_pack_1" x="-5.4" y="-19.35" yaw="${pi/2}"/>
+  <xacro:worker name="worker_pack_2" x="-2.6" y="-19.35" yaw="${pi/2}" vest="hivis_orange"/>
+  <xacro:cylinder_prop name="trash_south" x="-0.6" y="-19.6" r="0.25" h="0.8" mat="zone_green"/>
+
+  <!-- Khu xuat hang canh cua -->
+  <xacro:floor_mark name="ship_line_w" x="9.4"  y="-19.5" sx="0.1" sy="8.6" h="0.006"/>
+  <xacro:floor_mark name="ship_line_e" x="14.4" y="-19.5" sx="0.1" sy="8.6" h="0.006"/>
+  <xacro:floor_mark name="ship_line_n" x="11.9" y="-15.2" sx="5.1" sy="0.1" h="0.006"/>
+  <xacro:floor_mark name="ship_line_s" x="11.9" y="-23.8" sx="5.1" sy="0.1" h="0.006"/>
+  <xacro:pallet_stack name="ship_1" x="10.2" y="-17.4" layers="3"/>
+  <xacro:pallet_stack name="ship_2" x="11.6" y="-17.4" layers="2"/>
+  <xacro:pallet_stack name="ship_3" x="13.4" y="-19.5" layers="3" yaw="${pi/2}"/>
+  <xacro:pallet_stack name="ship_4" x="10.2" y="-21.6" layers="4"/>
+  <xacro:pallet_stack name="ship_5" x="11.6" y="-21.6" layers="1"/>
+  <xacro:pallet_jack  name="jack_ship" x="12.6" y="-23.2" yaw="${pi}"/>
+  <xacro:worker name="worker_ship" x="11.3" y="-23.1" yaw="${pi/2}"/>
+
+  <!-- ================================================================ -->
+  <!-- KHU PHIA BAC: VAN PHONG (Tay Bac) + HANG NHAP (giua)              -->
+  <!-- ================================================================ -->
+  <xacro:desk name="office_desk_1" x="-12.0" y="22.0"/>
+  <xacro:desk name="office_desk_2" x="-9.5"  y="22.0"/>
+  <xacro:worker name="worker_office" x="-12.0" y="21.15" yaw="${pi/2}"/>
+  <xacro:cylinder_prop name="trash_north" x="-14.2" y="24.2" r="0.25" h="0.8" mat="zone_green"/>
+
+  <xacro:pallet_stack name="in_1" x="-2.0" y="20.5" layers="2"/>
+  <xacro:pallet_stack name="in_2" x="-2.0" y="22.5" layers="3"/>
+  <xacro:pallet_stack name="in_3" x="0.0"  y="20.5" layers="4"/>
+  <xacro:pallet_stack name="in_4" x="0.0"  y="22.5" layers="1"/>
+  <xacro:pallet_stack name="in_5" x="6.0"  y="22.5" layers="2"/>
+  <xacro:pallet_jack  name="jack_in" x="3.0" y="21.0"/>
+  <xacro:cylinder_prop name="bucket_1" x="8.0"  y="23.8" r="0.18" h="0.35" mat="bucket_blue"/>
+  <xacro:cylinder_prop name="bucket_2" x="8.45" y="23.8" r="0.18" h="0.35" mat="bucket_blue"/>
+  <xacro:cylinder_prop name="bucket_3" x="8.2"  y="24.2" r="0.18" h="0.70" mat="bucket_blue"/>
+
+  <!-- ================================================================ -->
+  <!-- NHAN VIEN TREN LOI DI / TRONG HANH LANG                           -->
+  <!-- ================================================================ -->
+  <xacro:if value="$(arg static_walkers)">
+    <xacro:worker name="worker_walk_main"  x="2.0"  y="-3.0" yaw="${pi/2}"/>
+    <xacro:worker name="worker_walk_north" x="-4.0" y="13.6" yaw="0" vest="hivis_orange"/>
+  </xacro:if>
+  <xacro:worker name="worker_aisle"      x="-7.9" y="7.5"  yaw="${pi}"/>
+
+</robot>

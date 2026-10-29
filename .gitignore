@@ -1,0 +1,9 @@
+# colcon
+build/
+install/
+log/
+# Python
+__pycache__/
+*.pyc
+# file trang thai RMF tu sinh khi chay
+.rmf_schedule_node.yaml

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!--
+  MAT BANG TAI (phan chuyen dong). Khung, chan va tam chan nam trong warehouse.urdf.xacro.
+
+  Dung plugin TrackController cua Gazebo: mat bang dung yen nhung "keo" vat dat
+  len no theo truc +X cua link voi van toc dieu khien duoc.
+    gz topic : /model/conveyor/link/conveyor_belt/track_cmd_vel   (gz.msgs.Double)
+    ROS topic: /conveyor/speed  (std_msgs/msg/Float64, qua ros_gz_bridge)
+  Launch file spawn model nay voi yaw = -pi/2 nen +X huong ve phia Nam (ve tam chan).
+-->
+<robot name="conveyor" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="length" default="8.0"/>
+  <xacro:arg name="width"  default="0.8"/>
+  <xacro:property name="L" value="$(arg length)"/>
+  <xacro:property name="W" value="$(arg width)"/>
+  <xacro:property name="T" value="0.1"/>   <!-- do day mat bang -->
+
+
+  <link name="conveyor_belt">
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual>
+      <geometry><box size="${L} ${W} ${T}"/></geometry>
+      <material name="belt_black"><color rgba="0.12 0.12 0.12 1"/></material>
+    </visual>
+    <!-- 2 con lan o 2 dau -->
+    <visual>
+      <origin xyz="${L/2} 0 0" rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${T/2}" length="${W}"/></geometry>
+      <material name="roller"><color rgba="0.60 0.62 0.65 1"/></material>
+    </visual>
+    <visual>
+      <origin xyz="${-L/2} 0 0" rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${T/2}" length="${W}"/></geometry>
+      <material name="roller"><color rgba="0.60 0.62 0.65 1"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="${L} ${W} ${T}"/></geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="conveyor_belt">
+    <mu1>0.7</mu1>
+    <mu2>150</mu2>
+    <fdir1>0 1 0</fdir1>
+  </gazebo>
+
+  <gazebo>
+    <static>true</static>
+    <plugin filename="gz-sim-track-controller-system" name="gz::sim::systems::TrackController">
+      <link>conveyor_belt</link>
+      <odometry_publish_frequency>1</odometry_publish_frequency>
+    </plugin>
+  </gazebo>
+
+</robot>

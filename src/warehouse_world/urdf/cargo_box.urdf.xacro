@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!--
+  THUNG HANG DONG (khong static) - robot co the day, gap, cho di.
+  Launch file spawn nhieu thung tren bang tai va tren pallet o goc Dong Bac.
+    xacro cargo_box.urdf.xacro size:=0.4 mass:=2.0 color:="0.72 0.53 0.32 1"
+-->
+<robot name="cargo_box" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="size"  default="0.4"/>
+  <xacro:arg name="mass"  default="2.0"/>
+  <xacro:arg name="color" default="0.72 0.53 0.32 1"/>
+  <xacro:property name="a" value="$(arg size)"/>
+  <xacro:property name="m" value="$(arg mass)"/>
+
+  <link name="box">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*a*a/6}" ixy="0" ixz="0" iyy="${m*a*a/6}" iyz="0" izz="${m*a*a/6}"/>
+    </inertial>
+    <visual>
+      <geometry><box size="${a} ${a} ${a}"/></geometry>
+      <material name="cargo"><color rgba="$(arg color)"/></material>
+    </visual>
+    <!-- bang keo tren nap thung -->
+    <visual>
+      <origin xyz="0 0 ${a/2}"/>
+      <geometry><box size="${a + 0.002} 0.06 0.002"/></geometry>
+      <material name="tape"><color rgba="0.85 0.80 0.65 1"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="${a} ${a} ${a}"/></geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="box">
+    <mu1>0.8</mu1>
+    <mu2>0.8</mu2>
+  </gazebo>
+
+</robot>

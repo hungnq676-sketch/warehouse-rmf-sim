@@ -1,0 +1,114 @@
+# Do thi duong di cho robot trong nha kho (don vi: m, rad; khung warehouse_floor)
+#
+# File nay la NGUON DUY NHAT cho duong di:
+#   - warehouse.urdf.xacro doc file nay de VE vach duong di + diem dung len san
+#   - code dieu huong cua ban co the doc lai file nay de lap ke hoach (A*, Dijkstra...)
+#
+# type:
+#   junction : nga re (o vuong xanh duong nho)
+#   station  : diem dung lam viec (o vuong cam) - lay hang / tra hang / dong goi
+#   home     : diem xuat phat cua robot (o vuong do)
+#   charge   : tram sac (da co o xanh la ben duoi, khong ve them)
+# yaw (tuy chon): huong robot nen quay mat ve khi dung tai station.
+
+nodes:
+  # ---- Vanh dai quanh khoi ke (Tay x=-18, Dong x=18, Nam y=-8, Bac y=17) ----
+  j_sw:      {x: -18.0, y: -8.0,  type: junction}
+  j_se:      {x:  18.0, y: -8.0,  type: junction}
+  j_nw:      {x: -18.0, y: 17.0,  type: junction}
+  j_ne:      {x:  18.0, y: 17.0,  type: junction}
+  n_mid:     {x:   0.0, y: 17.0,  type: junction}
+
+  # ---- 3 hanh lang lay hang: dau Tay, giua (diem lay hang), dau Dong ----
+  a1_w:      {x: -18.0, y: -1.9,  type: junction}
+  a1_pick:   {x:   0.0, y: -1.9,  type: station, yaw: 0.0}
+  a1_e:      {x:  18.0, y: -1.9,  type: junction}
+  a2_w:      {x: -18.0, y:  4.4,  type: junction}
+  a2_pick:   {x:   0.0, y:  4.4,  type: station, yaw: 0.0}
+  a2_e:      {x:  18.0, y:  4.4,  type: junction}
+  a3_w:      {x: -18.0, y: 10.7,  type: junction}
+  a3_pick:   {x:   0.0, y: 10.7,  type: station, yaw: 0.0}
+  a3_e:      {x:  18.0, y: 10.7,  type: junction}
+
+  # ---- Khu phia Nam: diem xuat phat, ban dong goi, cua xuat hang ----
+  home:      {x:   0.0, y: -8.0,  type: home, yaw: 1.5708}
+  d1_j:      {x: -12.0, y: -8.0,  type: junction}
+  d3_j:      {x:  12.0, y: -8.0,  type: junction}
+  p1_j:      {x:  -6.0, y: -8.0,  type: junction}
+  p2_j:      {x:   6.0, y: -8.0,  type: junction}
+  pack_1:    {x:  -6.0, y: -10.8, type: station, yaw: -1.5708}
+  pack_2:    {x:   6.0, y: -10.8, type: station, yaw: -1.5708}
+  dock_1:    {x: -12.0, y: -17.0, type: station, yaw: -1.5708}
+  dock_2:    {x:   0.0, y: -17.0, type: station, yaw: -1.5708}
+  dock_3:    {x:  12.0, y: -17.0, type: station, yaw: -1.5708}
+
+  # ---- Tram sac (sat tuong Tay) ----
+  c1_j:      {x: -18.0, y: -12.0, type: junction}
+  c2_j:      {x: -18.0, y: -9.0,  type: junction}
+  c3_j:      {x: -18.0, y: -6.0,  type: junction}
+  charge_1:  {x: -23.5, y: -12.0, type: charge, yaw: 3.1416}
+  charge_2:  {x: -23.5, y: -9.0,  type: charge, yaw: 3.1416}
+  charge_3:  {x: -23.5, y: -6.0,  type: charge, yaw: 3.1416}
+
+  # ---- Goc Dong Bac: BANG TAI + DONG HANG (noi robot NHAN hang) ----
+  pile_pick: {x:  19.8, y: 17.0,  type: station, yaw: 1.5708}   # quay mat len dong hang
+  conv_pick: {x:  21.6, y: 17.0,  type: station, yaw: 0.0}      # quay mat vao cuoi bang tai
+
+  # ---- Goc Tay Bac: KHU XEP HANG (noi robot TRA hang len pallet) ----
+  stack_in:  {x: -22.0, y: 17.0,  type: junction}
+  slot_1:    {x: -22.0, y: 18.8,  type: station, yaw: 0.0}      # pallet o 2 ben: yaw 0 (Dong) / 3.14 (Tay)
+  slot_2:    {x: -22.0, y: 20.4,  type: station, yaw: 0.0}
+  slot_3:    {x: -22.0, y: 22.0,  type: station, yaw: 0.0}
+  slot_4:    {x: -22.0, y: 23.6,  type: station, yaw: 0.0}
+
+# Canh (duong di 2 chieu). Moi canh se duoc ve thanh 1 vach trang tren san.
+edges:
+  # Vanh dai Tay
+  - [c1_j, c2_j]
+  - [c2_j, j_sw]
+  - [j_sw, c3_j]
+  - [c3_j, a1_w]
+  - [a1_w, a2_w]
+  - [a2_w, a3_w]
+  - [a3_w, j_nw]
+  # Vanh dai Nam
+  - [j_sw, d1_j]
+  - [d1_j, p1_j]
+  - [p1_j, home]
+  - [home, p2_j]
+  - [p2_j, d3_j]
+  - [d3_j, j_se]
+  # Vanh dai Dong
+  - [j_se, a1_e]
+  - [a1_e, a2_e]
+  - [a2_e, a3_e]
+  - [a3_e, j_ne]
+  # Vanh dai Bac
+  - [j_nw, n_mid]
+  - [n_mid, j_ne]
+  # 3 hanh lang lay hang
+  - [a1_w, a1_pick]
+  - [a1_pick, a1_e]
+  - [a2_w, a2_pick]
+  - [a2_pick, a2_e]
+  - [a3_w, a3_pick]
+  - [a3_pick, a3_e]
+  # Cua xuat hang & ban dong goi
+  - [d1_j, dock_1]
+  - [home, dock_2]
+  - [d3_j, dock_3]
+  - [p1_j, pack_1]
+  - [p2_j, pack_2]
+  # Tram sac
+  - [c1_j, charge_1]
+  - [c2_j, charge_2]
+  - [c3_j, charge_3]
+  # Bang tai (Dong Bac)
+  - [j_ne, pile_pick]
+  - [pile_pick, conv_pick]
+  # Khu xep hang (Tay Bac)
+  - [j_nw, stack_in]
+  - [stack_in, slot_1]
+  - [slot_1, slot_2]
+  - [slot_2, slot_3]
+  - [slot_3, slot_4]

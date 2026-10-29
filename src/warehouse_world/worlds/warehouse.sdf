@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--
+  World rong: chi co vat ly, anh sang va cac plugin co ban.
+  Nha kho (URDF/Xacro) duoc spawn vao luc chay boi warehouse_gazebo.launch.py
+-->
+<sdf version="1.8">
+  <world name="warehouse">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.75 0.85 0.95 1</background>
+      <grid>false</grid>
+    </scene>
+
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>0 -55 45 0 0.75 1.5708</pose>
+      </camera>
+    </gui>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 30 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.3 -0.9</direction>
+    </light>
+
+    <!-- Mat dat ben ngoai nha kho -->
+    <model name="ground_plane">
+      <static>true</static>
+      <pose>0 0 -0.11 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+          <material>
+            <ambient>0.35 0.45 0.30 1</ambient>
+            <diffuse>0.35 0.45 0.30 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

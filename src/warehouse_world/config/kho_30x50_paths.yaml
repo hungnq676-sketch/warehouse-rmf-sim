@@ -1,0 +1,101 @@
+# Do thi duong di robot - KHO 30m x 50m (don vi m, rad; khung warehouse_floor)
+# Goc toa do o tam kho: x in [-15, 15] (Tay -> Dong), y in [-25, 25] (Nam -> Bac).
+# kho_30x50.urdf.xacro doc file nay de ve vach dan duong + diem dung len san.
+#
+# type: junction (o xanh nho) | station (o cam) | home (o do) | charge (tram sac, khong ve them)
+
+nodes:
+  # ---- Hanh lang ngang phia Nam (lan robot y = -12.1) ----
+  s_a1:      {x: -12.15, y: -12.1, type: junction}
+  s_a2:      {x:  -6.85, y: -12.1, type: junction}
+  s_pack:    {x:  -4.0,  y: -12.1, type: junction}
+  s_a3:      {x:  -1.55, y: -12.1, type: junction}
+  s_main:    {x:   4.8,  y: -12.1, type: junction}
+  s_east:    {x:  11.0,  y: -12.1, type: junction}
+
+  # ---- Hanh lang ngang phia Bac (lan robot y = 15.8) ----
+  n_a1:      {x: -12.15, y: 15.8,  type: junction}
+  n_a2:      {x:  -6.85, y: 15.8,  type: junction}
+  n_a3:      {x:  -1.55, y: 15.8,  type: junction}
+  n_main:    {x:   4.8,  y: 15.8,  type: junction}
+  n_east:    {x:  11.0,  y: 15.8,  type: junction}
+  n_conv:    {x:  12.6,  y: 15.8,  type: junction}
+
+  # ---- 3 hanh lang lay hang giua cac day ke ----
+  a1_pick:   {x: -12.15, y: 1.8,   type: station, yaw: 1.5708}
+  a2_pick:   {x:  -6.85, y: 1.8,   type: station, yaw: 1.5708}
+  a3_pick:   {x:  -1.55, y: 1.8,   type: station, yaw: 1.5708}
+
+  # ---- Truc chinh (lan robot x = 4.8, ben canh loi di nguoi x = 2.0) ----
+  m_mid:     {x:   4.8,  y: 1.8,   type: junction}
+  home:      {x:   4.8,  y: -16.0, type: home, yaw: 1.5708}
+  ship_j:    {x:   4.8,  y: -19.5, type: junction}
+  ship_drop: {x:   8.4,  y: -19.5, type: station, yaw: 0.0}
+  dock:      {x:   4.8,  y: -23.0, type: station, yaw: -1.5708}   # cua ra vao duy nhat
+
+  # ---- Khu chong hang phia Dong (robot xep hang tu bang tai vao day) ----
+  stack_1:   {x:  11.0,  y: -3.4,  type: station, yaw: 0.0}      # pallet trong o 2 ben
+  stack_2:   {x:  11.0,  y: 1.4,   type: station, yaw: 0.0}
+  stack_3:   {x:  11.0,  y: 6.2,   type: station, yaw: 0.0}
+
+  # ---- Bang tai doc (goc Dong Bac) ----
+  conv_pick: {x:  12.6,  y: 17.0,  type: station, yaw: 1.5708}   # quay mat vao dau thap bang tai
+
+  # ---- Ban dong goi ----
+  pack_1:    {x:  -4.0,  y: -17.2, type: station, yaw: -1.5708}
+
+  # ---- 4 tram sac (tuong Tay, phia Nam) - moi robot AMR 1 tram ----
+  ch_j1:     {x: -12.15, y: -16.0, type: junction}
+  ch_j2:     {x: -12.15, y: -19.0, type: junction}
+  ch_j3:     {x: -12.15, y: -22.0, type: junction}
+  ch_j4:     {x: -12.15, y: -24.0, type: junction}
+  charge_1:  {x: -13.9,  y: -16.0, type: charge, yaw: 3.1416}
+  charge_2:  {x: -13.9,  y: -19.0, type: charge, yaw: 3.1416}
+  charge_3:  {x: -13.9,  y: -22.0, type: charge, yaw: 3.1416}
+  charge_4:  {x: -13.9,  y: -24.0, type: charge, yaw: 3.1416}
+
+edges:
+  # Hanh lang Nam
+  - [s_a1, s_a2]
+  - [s_a2, s_pack]
+  - [s_pack, s_a3]
+  - [s_a3, s_main]
+  - [s_main, s_east]
+  # Hanh lang Bac
+  - [n_a1, n_a2]
+  - [n_a2, n_a3]
+  - [n_a3, n_main]
+  - [n_main, n_east]
+  - [n_east, n_conv]
+  # 3 hanh lang lay hang
+  - [s_a1, a1_pick]
+  - [a1_pick, n_a1]
+  - [s_a2, a2_pick]
+  - [a2_pick, n_a2]
+  - [s_a3, a3_pick]
+  - [a3_pick, n_a3]
+  # Truc chinh
+  - [s_main, m_mid]
+  - [m_mid, n_main]
+  - [s_main, home]
+  - [home, ship_j]
+  - [ship_j, dock]
+  - [ship_j, ship_drop]
+  # Khu chong hang
+  - [s_east, stack_1]
+  - [stack_1, stack_2]
+  - [stack_2, stack_3]
+  - [stack_3, n_east]
+  # Bang tai
+  - [n_conv, conv_pick]
+  # Dong goi
+  - [s_pack, pack_1]
+  # Tram sac
+  - [s_a1, ch_j1]
+  - [ch_j1, ch_j2]
+  - [ch_j2, ch_j3]
+  - [ch_j1, charge_1]
+  - [ch_j2, charge_2]
+  - [ch_j3, charge_3]
+  - [ch_j3, ch_j4]
+  - [ch_j4, charge_4]

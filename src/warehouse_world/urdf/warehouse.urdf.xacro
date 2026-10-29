@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<!--
+  NHA KHO 50m x 50m - 3 HANH LANG LAY HANG
+  Goc toa do (0,0) o tam nha kho, truc X huong Dong, truc Y huong Bac.
+
+        y=+25  +==================================================+
+               | [XEP HANG]   hanh lang ngang (Bac)    [BANG TAI] |
+               |  ===================== Day ke D ================ |
+               |  .............. HANH LANG 3 (xanh duong) ....... |
+               |  ===================== Day ke C (lung-lung) ==== |
+               |  .............. HANH LANG 2 (xanh la) .......... |
+               |  ===================== Day ke B (lung-lung) ==== |
+               |  .............. HANH LANG 1 (do) ............... |
+               |  ===================== Day ke A ================ |
+               |  [sac]    ban dong goi x2                        |
+               |        khu tap ket pallet x3                     |
+        y=-25  +=====[cua 1]========[cua 2]========[cua 3]========+
+             x=-25                                              x=+25
+
+  Tat ca kich thuoc deu la tham so xacro, co the doi khi goi xacro, vd:
+    xacro warehouse.urdf.xacro aisle_width:=3.5 bays_per_row:=9
+-->
+<robot name="warehouse" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===== Tham so co the doi tu dong lenh ===== -->
+  <xacro:arg name="aisle_width"  default="4.0"/>   <!-- be rong hanh lang lay hang (m) -->
+  <xacro:arg name="bays_per_row" default="11"/>    <!-- so o ke moi day -->
+  <xacro:arg name="with_roof"    default="false"/> <!-- them mai (che tam nhin tu tren) -->
+
+  <xacro:include filename="$(find warehouse_world)/urdf/warehouse_macros.xacro"/>
+
+  <!-- ===== Kich thuoc nha kho ===== -->
+  <xacro:property name="wh_size"   value="50.0"/>  <!-- 50 x 50 m (kich thuoc ngoai) -->
+  <xacro:property name="wall_t"    value="0.2"/>
+  <xacro:property name="wall_h"    value="8.0"/>
+  <xacro:property name="half"      value="${wh_size/2}"/>
+
+  <!-- ===== Kich thuoc ke ===== -->
+  <xacro:property name="bay_length"   value="2.7"/>  <!-- chieu dai 1 o ke theo X -->
+  <xacro:property name="rack_depth"   value="1.1"/>  <!-- chieu sau 1 ke theo Y -->
+  <xacro:property name="rack_height"  value="4.6"/>
+  <xacro:property name="b2b_gap"      value="0.1"/>  <!-- khe giua 2 ke lung-lung -->
+  <xacro:property name="bays"         value="$(arg bays_per_row)"/>
+  <xacro:property name="aisle_w"      value="$(arg aisle_width)"/>
+  <xacro:property name="row_len"      value="${bays*bay_length}"/>
+  <xacro:property name="row_x0"       value="${-row_len/2}"/>
+  <xacro:property name="block_y0"     value="-5.0"/> <!-- mep Nam cua khoi ke -->
+
+  <!-- ===== Tinh vi tri cac day ke / hanh lang theo truc Y ===== -->
+  <xacro:property name="d"         value="${rack_depth}"/>
+  <xacro:property name="rowA_y"    value="${block_y0 + d/2}"/>
+  <xacro:property name="aisle1_lo" value="${block_y0 + d}"/>
+  <xacro:property name="aisle1_hi" value="${aisle1_lo + aisle_w}"/>
+  <xacro:property name="rowB1_y"   value="${aisle1_hi + d/2}"/>
+  <xacro:property name="rowB2_y"   value="${rowB1_y + d + b2b_gap}"/>
+  <xacro:property name="aisle2_lo" value="${rowB2_y + d/2}"/>
+  <xacro:property name="aisle2_hi" value="${aisle2_lo + aisle_w}"/>
+  <xacro:property name="rowC1_y"   value="${aisle2_hi + d/2}"/>
+  <xacro:property name="rowC2_y"   value="${rowC1_y + d + b2b_gap}"/>
+  <xacro:property name="aisle3_lo" value="${rowC2_y + d/2}"/>
+  <xacro:property name="aisle3_hi" value="${aisle3_lo + aisle_w}"/>
+  <xacro:property name="rowD_y"    value="${aisle3_hi + d/2}"/>
+
+  <!-- Mo hinh tinh: Gazebo khong mo phong dong luc hoc cho nha kho -->
+  <gazebo>
+    <static>true</static>
+  </gazebo>
+
+  <!-- ================================================================ -->
+  <!-- SAN NHA (link goc)                                               -->
+  <!-- ================================================================ -->
+  <link name="warehouse_floor">
+    <visual>
+      <origin xyz="0 0 -0.05"/>
+      <geometry><box size="${wh_size} ${wh_size} 0.1"/></geometry>
+      <xacro:mat n="floor_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05"/>
+      <geometry><box size="${wh_size} ${wh_size} 0.1"/></geometry>
+    </collision>
+    <xacro:dummy_inertial/>
+  </link>
+
+  <!-- ================================================================ -->
+  <!-- TUONG BAO                                                        -->
+  <!-- ================================================================ -->
+  <xacro:static_box name="wall_north" x="0" y="${ half - wall_t/2}" sx="${wh_size}" sy="${wall_t}" sz="${wall_h}"/>
+  <xacro:static_box name="wall_east"  x="${ half - wall_t/2}" y="0" sx="${wall_t}" sy="${wh_size - 2*wall_t}" sz="${wall_h}"/>
+  <xacro:static_box name="wall_west"  x="${-half + wall_t/2}" y="0" sx="${wall_t}" sy="${wh_size - 2*wall_t}" sz="${wall_h}"/>
+
+  <!-- Tuong Nam co 3 cua nhap/xuat hang rong 4m, cao 4.5m tai x = -12, 0, 12 -->
+  <xacro:property name="door_w" value="4.0"/>
+  <xacro:property name="door_h" value="4.5"/>
+  <xacro:property name="ys"     value="${-half + wall_t/2}"/>
+  <!-- cac doan tuong giua cac cua: [-25,-14] [-10,-2] [2,10] [14,25] -->
+  <xacro:static_box name="wall_south_0" x="-19.5" y="${ys}" sx="11.0" sy="${wall_t}" sz="${wall_h}"/>
+  <xacro:static_box name="wall_south_1" x="-6.0"  y="${ys}" sx="8.0"  sy="${wall_t}" sz="${wall_h}"/>
+  <xacro:static_box name="wall_south_2" x="6.0"   y="${ys}" sx="8.0"  sy="${wall_t}" sz="${wall_h}"/>
+  <xacro:static_box name="wall_south_3" x="19.5"  y="${ys}" sx="11.0" sy="${wall_t}" sz="${wall_h}"/>
+  <!-- dam phia tren cua -->
+  <xacro:static_box name="door_lintel_1" x="-12.0" y="${ys}" sx="${door_w}" sy="${wall_t}" sz="${wall_h - door_h}" z="${door_h}"/>
+  <xacro:static_box name="door_lintel_2" x="0.0"   y="${ys}" sx="${door_w}" sy="${wall_t}" sz="${wall_h - door_h}" z="${door_h}"/>
+  <xacro:static_box name="door_lintel_3" x="12.0"  y="${ys}" sx="${door_w}" sy="${wall_t}" sz="${wall_h - door_h}" z="${door_h}"/>
+
+  <xacro:if value="$(arg with_roof)">
+    <xacro:static_box name="roof" x="0" y="0" sx="${wh_size}" sy="${wh_size}" sz="0.15" z="${wall_h}" mat="wall_white"/>
+  </xacro:if>
+
+  <!-- Cot chiu luc (nam ngoai khu ke, khong chan hanh lang) -->
+  <xacro:static_box name="column_sw" x="-18" y="-15" sx="0.4" sy="0.4" sz="${wall_h}" mat="table_gray"/>
+  <xacro:static_box name="column_se" x="18"  y="-15" sx="0.4" sy="0.4" sz="${wall_h}" mat="table_gray"/>
+  <xacro:static_box name="column_nw" x="-10" y="23"  sx="0.4" sy="0.4" sz="${wall_h}" mat="table_gray"/>
+  <xacro:static_box name="column_ne" x="10"  y="23"  sx="0.4" sy="0.4" sz="${wall_h}" mat="table_gray"/>
+
+  <!-- ================================================================ -->
+  <!-- KHU KE HANG: 4 day ke -> 3 HANH LANG LAY HANG                    -->
+  <!--   A (don) | HL1 | B (lung-lung) | HL2 | C (lung-lung) | HL3 | D  -->
+  <!-- ================================================================ -->
+  <xacro:rack_row prefix="rack_A"  n="${bays}" x_start="${row_x0}" y="${rowA_y}"  depth="${d}" seed="0"/>
+  <xacro:rack_row prefix="rack_B1" n="${bays}" x_start="${row_x0}" y="${rowB1_y}" depth="${d}" seed="1"/>
+  <xacro:rack_row prefix="rack_B2" n="${bays}" x_start="${row_x0}" y="${rowB2_y}" depth="${d}" seed="2"/>
+  <xacro:rack_row prefix="rack_C1" n="${bays}" x_start="${row_x0}" y="${rowC1_y}" depth="${d}" seed="3"/>
+  <xacro:rack_row prefix="rack_C2" n="${bays}" x_start="${row_x0}" y="${rowC2_y}" depth="${d}" seed="4"/>
+  <xacro:rack_row prefix="rack_D"  n="${bays}" x_start="${row_x0}" y="${rowD_y}"  depth="${d}" seed="5"/>
+
+  <!-- Vach vang 2 ben moi hanh lang -->
+  <xacro:macro name="aisle_marks" params="id lo hi mat">
+    <xacro:floor_mark name="aisle${id}_line_s" x="0" y="${lo + 0.15}" sx="${row_len}" sy="0.1"/>
+    <xacro:floor_mark name="aisle${id}_line_n" x="0" y="${hi - 0.15}" sx="${row_len}" sy="0.1"/>
+    <!-- Bien mau nhan dien hanh lang o 2 dau (dau Tay va dau Dong) -->
+    <xacro:floor_mark name="aisle${id}_tag_w" x="${row_x0 - 1.0}" y="${(lo + hi)/2}" sx="1.2" sy="${hi - lo - 0.6}" mat="${mat}"/>
+    <xacro:floor_mark name="aisle${id}_tag_e" x="${-row_x0 + 1.0}" y="${(lo + hi)/2}" sx="1.2" sy="${hi - lo - 0.6}" mat="${mat}"/>
+  </xacro:macro>
+  <xacro:aisle_marks id="1" lo="${aisle1_lo}" hi="${aisle1_hi}" mat="zone_red"/>
+  <xacro:aisle_marks id="2" lo="${aisle2_lo}" hi="${aisle2_hi}" mat="zone_green"/>
+  <xacro:aisle_marks id="3" lo="${aisle3_lo}" hi="${aisle3_hi}" mat="zone_blue"/>
+
+  <!-- ================================================================ -->
+  <!-- KHU PHIA NAM: dong goi, tap ket, tram sac                         -->
+  <!-- ================================================================ -->
+  <!-- Ban dong goi -->
+  <xacro:static_box name="pack_table_1" x="-6" y="-12" sx="2.0" sy="1.0" sz="0.9" mat="table_gray"/>
+  <xacro:static_box name="pack_table_2" x="6"  y="-12" sx="2.0" sy="1.0" sz="0.9" mat="table_gray"/>
+
+  <!-- Khu tap ket truoc 3 cua (o vuong xanh duong) -->
+  <xacro:floor_mark name="staging_1" x="-12" y="-20" sx="5.0" sy="5.0" mat="zone_blue"/>
+  <xacro:floor_mark name="staging_2" x="0"   y="-20" sx="5.0" sy="5.0" mat="zone_blue"/>
+  <xacro:floor_mark name="staging_3" x="12"  y="-20" sx="5.0" sy="5.0" mat="zone_blue"/>
+  <xacro:pallet_load name="pallet_1" x="-13.2" y="-19.0" load_h="1.2"/>
+  <xacro:pallet_load name="pallet_2" x="-10.8" y="-21.0" load_h="0.8"/>
+  <xacro:pallet_load name="pallet_3" x="12.0"  y="-20.0" yaw="${pi/2}" load_h="1.0"/>
+
+  <!-- Tram sac cho robot AMR (sat tuong Tay) -->
+  <xacro:floor_mark name="charge_pad_1" x="-23.5" y="-12" sx="1.5" sy="1.5" mat="zone_green"/>
+  <xacro:floor_mark name="charge_pad_2" x="-23.5" y="-9"  sx="1.5" sy="1.5" mat="zone_green"/>
+  <xacro:floor_mark name="charge_pad_3" x="-23.5" y="-6"  sx="1.5" sy="1.5" mat="zone_green"/>
+
+  <!-- ================================================================ -->
+  <!-- GOC DONG BAC: BANG TAI + DONG HANG (robot NHAN hang)             -->
+  <!-- Mat bang (chuyen dong) la model rieng conveyor.urdf.xacro,        -->
+  <!-- duoc spawn dung vi tri nay boi launch file.                       -->
+  <!-- ================================================================ -->
+  <xacro:property name="conv_x"      value="23.0"/>  <!-- truc giua bang tai -->
+  <xacro:property name="conv_y_end"  value="16.5"/>  <!-- dau ra (phia Nam) -->
+  <xacro:property name="conv_len"    value="8.0"/>
+  <xacro:property name="conv_w"      value="0.8"/>
+  <xacro:property name="conv_h"      value="0.8"/>   <!-- do cao mat bang -->
+  <xacro:conveyor_frame x="${conv_x}" y_end="${conv_y_end}" length="${conv_len}"
+                        width="${conv_w}" height="${conv_h}"/>
+  <!-- Vung lam viec quanh bang tai -->
+  <xacro:floor_mark name="conveyor_zone" x="21.6" y="20.5" sx="6.4" sy="8.6" mat="zone_orange" h="0.004"/>
+  <!-- Hang cho dua len bang tai (trang tri, tinh) -->
+  <xacro:pallet_load name="inbound_pallet_1" x="21.0" y="23.8" load_h="1.4"/>
+  <xacro:pallet_load name="inbound_pallet_2" x="21.0" y="22.4" load_h="1.0"/>
+  <!-- Pallet de dong hang dong (cac thung tren pallet nay robot boc duoc) -->
+  <xacro:pallet_empty name="pile_pallet" x="19.8" y="18.6"/>
+
+  <!-- ================================================================ -->
+  <!-- GOC TAY BAC: KHU XEP HANG (robot TRA hang len pallet)            -->
+  <!-- 2 cot x 4 o pallet, duong di o giua (x = -22)                    -->
+  <!-- ================================================================ -->
+  <xacro:floor_mark name="stack_zone" x="-22.0" y="21.2" sx="5.2" sy="6.6" mat="zone_orange" h="0.004"/>
+  <xacro:macro name="stack_slot_pair" params="i y">
+    <xacro:pallet_empty name="stack_pallet_w${i}" x="-23.6" y="${y}"/>
+    <xacro:pallet_empty name="stack_pallet_e${i}" x="-20.4" y="${y}"/>
+  </xacro:macro>
+  <xacro:stack_slot_pair i="1" y="18.8"/>
+  <xacro:stack_slot_pair i="2" y="20.4"/>
+  <xacro:stack_slot_pair i="3" y="22.0"/>
+  <xacro:stack_slot_pair i="4" y="23.6"/>
+
+  <!-- ================================================================ -->
+  <!-- DUONG DI ROBOT (ve tu config/robot_paths.yaml)                   -->
+  <!-- ================================================================ -->
+  <xacro:property name="paths"
+                  value="${xacro.load_yaml('$(find warehouse_world)/config/robot_paths.yaml')}"/>
+  <xacro:path_edges/>
+  <xacro:path_nodes names="${python.sorted(paths['nodes'].keys())}"/>
+
+</robot>

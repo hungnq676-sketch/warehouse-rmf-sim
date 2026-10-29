@@ -1,0 +1,290 @@
+<?xml version="1.0"?>
+<!--
+  Macro cho kho 30m x 50m (dung chung voi warehouse_macros.xacro):
+    lan robot, loi di nguoi, vach qua duong, vach canh bao vang-den,
+    nhan vien (hinh hoc), tram sac, khung bang tai doc, chong hang,
+    ban lam viec, thung rac, xo nhua, xe nang tay.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+
+  <!-- Hinh hop chi co visual (dung ben trong 1 link) -->
+  <xacro:macro name="vbox" params="x y z sx sy sz mat r:=0 p:=0 yw:=0">
+    <visual>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yw}"/>
+      <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+      <xacro:mat n="${mat}"/>
+    </visual>
+  </xacro:macro>
+  <!-- Hinh hop co ca visual + collision -->
+  <xacro:macro name="cbox" params="x y z sx sy sz mat r:=0 p:=0 yw:=0">
+    <xacro:vbox x="${x}" y="${y}" z="${z}" sx="${sx}" sy="${sy}" sz="${sz}" mat="${mat}" r="${r}" p="${p}" yw="${yw}"/>
+    <collision>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yw}"/>
+      <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+    </collision>
+  </xacro:macro>
+
+  <!-- ===== Tuong co dai son xam phia duoi (giong kho AWS) ===== -->
+  <xacro:macro name="wall" params="name x y sx sy h band:=1.2">
+    <link name="${name}">
+      <xacro:cbox x="0" y="0" z="${h/2}" sx="${sx}" sy="${sy}" sz="${h}" mat="wall_white"/>
+      <xacro:vbox x="0" y="0" z="${band/2}" sx="${sx + 0.02}" sy="${sy + 0.02}" sz="${band}" mat="wall_band"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0"/>
+  </xacro:macro>
+
+  <!-- ===== Lan robot: nen xanh + 2 vach trang 2 ben (theo canh dai) ===== -->
+  <xacro:macro name="robot_lane" params="name x0 x1 y0 y1">
+    <xacro:floor_mark name="${name}" x="${(x0 + x1)/2}" y="${(y0 + y1)/2}"
+                      sx="${x1 - x0}" sy="${y1 - y0}" mat="robot_lane" h="0.004"/>
+    <xacro:if value="${(x1 - x0) &gt;= (y1 - y0)}">
+      <xacro:floor_mark name="${name}_edge_a" x="${(x0 + x1)/2}" y="${y0 + 0.06}" sx="${x1 - x0}" sy="0.08" mat="lane_white" h="0.006"/>
+      <xacro:floor_mark name="${name}_edge_b" x="${(x0 + x1)/2}" y="${y1 - 0.06}" sx="${x1 - x0}" sy="0.08" mat="lane_white" h="0.006"/>
+    </xacro:if>
+    <xacro:if value="${(x1 - x0) &lt; (y1 - y0)}">
+      <xacro:floor_mark name="${name}_edge_a" x="${x0 + 0.06}" y="${(y0 + y1)/2}" sx="0.08" sy="${y1 - y0}" mat="lane_white" h="0.006"/>
+      <xacro:floor_mark name="${name}_edge_b" x="${x1 - 0.06}" y="${(y0 + y1)/2}" sx="0.08" sy="${y1 - y0}" mat="lane_white" h="0.006"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- ===== Loi di nguoi: nen xanh la + 2 vien vang ===== -->
+  <xacro:macro name="walkway" params="name x0 x1 y0 y1">
+    <xacro:floor_mark name="${name}" x="${(x0 + x1)/2}" y="${(y0 + y1)/2}"
+                      sx="${x1 - x0}" sy="${y1 - y0}" mat="walkway_green" h="0.005"/>
+    <xacro:if value="${(x1 - x0) &gt;= (y1 - y0)}">
+      <xacro:floor_mark name="${name}_edge_a" x="${(x0 + x1)/2}" y="${y0 + 0.05}" sx="${x1 - x0}" sy="0.1" mat="line_yellow" h="0.007"/>
+      <xacro:floor_mark name="${name}_edge_b" x="${(x0 + x1)/2}" y="${y1 - 0.05}" sx="${x1 - x0}" sy="0.1" mat="line_yellow" h="0.007"/>
+    </xacro:if>
+    <xacro:if value="${(x1 - x0) &lt; (y1 - y0)}">
+      <xacro:floor_mark name="${name}_edge_a" x="${x0 + 0.05}" y="${(y0 + y1)/2}" sx="0.1" sy="${y1 - y0}" mat="line_yellow" h="0.007"/>
+      <xacro:floor_mark name="${name}_edge_b" x="${x1 - 0.05}" y="${(y0 + y1)/2}" sx="0.1" sy="${y1 - y0}" mat="line_yellow" h="0.007"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- ===== Vach qua duong (zebra) noi loi di nguoi cat lan robot =====
+       along: huong cua LOI DI NGUOI ('x' hoac 'y'); span: chieu dai vung ke vach
+       (= be rong lan robot); w: be rong loi di nguoi. Tat ca vach trong 1 link. -->
+  <xacro:macro name="zebra" params="name x y along span w">
+    <link name="${name}">
+      <xacro:zebra_stripes along="${along}" n="${int(span/0.6)}" span="${span}" w="${w}"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0"/>
+  </xacro:macro>
+  <xacro:macro name="zebra_stripes" params="along n span w i:=0">
+    <xacro:if value="${i &lt; n}">
+      <xacro:property name="off" value="${-(n - 1)*0.3 + i*0.6}"/>
+      <xacro:if value="${along == 'x'}">
+        <xacro:vbox x="${off}" y="0" z="0.0045" sx="0.3" sy="${w - 0.1}" sz="0.009" mat="lane_white"/>
+      </xacro:if>
+      <xacro:if value="${along == 'y'}">
+        <xacro:vbox x="0" y="${off}" z="0.0045" sx="${w - 0.1}" sy="0.3" sz="0.009" mat="lane_white"/>
+      </xacro:if>
+      <xacro:zebra_stripes along="${along}" n="${n}" span="${span}" w="${w}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- ===== Vach canh bao vang-den (cac o xen ke 0.3 m) ===== -->
+  <xacro:macro name="hazard" params="name x y length w:=0.15 yaw:=0">
+    <link name="${name}">
+      <xacro:hazard_cells n="${int(length/0.3)}" w="${w}"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+  <xacro:macro name="hazard_cells" params="n w i:=0">
+    <xacro:if value="${i &lt; n}">
+      <xacro:vbox x="${-(n - 1)*0.15 + i*0.3}" y="0" z="0.0035" sx="0.3" sy="${w}" sz="0.007"
+                  mat="${'line_yellow' if i % 2 == 0 else 'hazard_black'}"/>
+      <xacro:hazard_cells n="${n}" w="${w}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- ===== Nhan vien (hinh hoc don gian, tinh). Mat huong +X roi xoay yaw =====
+       Collision la hinh tru de lidar / robot coi la vat can. -->
+  <xacro:macro name="worker" params="name x y yaw:=0 vest:=hivis_yellow">
+    <link name="${name}">
+      <xacro:vbox x="0" y=" 0.1"  z="0.43" sx="0.15" sy="0.15" sz="0.86" mat="jeans"/>
+      <xacro:vbox x="0" y="-0.1"  z="0.43" sx="0.15" sy="0.15" sz="0.86" mat="jeans"/>
+      <xacro:vbox x="0" y="0"     z="1.17" sx="0.25" sy="0.42" sz="0.62" mat="${vest}"/>
+      <xacro:vbox x="0" y="0"     z="1.04" sx="0.26" sy="0.43" sz="0.05" mat="steel"/>
+      <xacro:vbox x="0" y=" 0.27" z="1.15" sx="0.10" sy="0.10" sz="0.60" mat="shirt_gray"/>
+      <xacro:vbox x="0" y="-0.27" z="1.15" sx="0.10" sy="0.10" sz="0.60" mat="shirt_gray"/>
+      <visual>
+        <origin xyz="0 0 1.60"/>
+        <geometry><sphere radius="0.11"/></geometry>
+        <xacro:mat n="skin"/>
+      </visual>
+      <visual>
+        <origin xyz="0 0 1.67"/>
+        <geometry><sphere radius="0.115"/></geometry>
+        <xacro:mat n="helmet_white"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.88"/>
+        <geometry><cylinder radius="0.3" length="1.76"/></geometry>
+      </collision>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+
+  <!-- ===== Tram sac: tu sac sat tuong + de sac tren san + vach canh bao =====
+       (x, y) la tam de sac; yaw huong tu de sac VAO tuong. -->
+  <xacro:macro name="charger" params="name x y yaw:=${pi}">
+    <link name="${name}">
+      <!-- de sac -->
+      <xacro:vbox x="0" y="0" z="0.004" sx="1.2" sy="1.2" sz="0.008" mat="zone_green"/>
+      <!-- tu sac (cach tam de 0.75 m ve phia tuong) -->
+      <xacro:cbox x="0.75" y="0" z="0.55" sx="0.3" sy="0.8" sz="1.1" mat="charger_body"/>
+      <xacro:vbox x="0.595" y="0" z="0.95" sx="0.02" sy="0.5" sz="0.08" mat="led_green"/>
+      <!-- tiep diem sac o do cao than robot -->
+      <xacro:vbox x="0.57" y="0" z="0.12" sx="0.06" sy="0.4" sz="0.08" mat="beam_orange"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+
+  <!-- ===== Khung bang tai doc (phan tinh) =====
+       Mat bang chuyen dong la model rieng (conveyor.urdf.xacro).
+       Bang chay doc truc Y: dau CAO o y_hi (sat tuong Bac), dau THAP o y_lo.
+       z_hi / z_lo: do cao MAT BANG o 2 dau. -->
+  <xacro:macro name="incline_conveyor_frame" params="x y_lo y_hi z_lo z_hi width">
+    <xacro:property name="run"   value="${y_hi - y_lo}"/>
+    <xacro:property name="drop"  value="${z_hi - z_lo}"/>
+    <xacro:property name="pitch" value="${atan2(drop, run)}"/>
+    <xacro:property name="blen"  value="${hypot(run, drop)}"/>
+
+    <!-- Phan nghieng: thanh chan 2 ben + tam chan o dau thap.
+         Khung toa do link: goc o tam MAT bang, truc +X huong xuong doc (ve y_lo). -->
+    <link name="conveyor_incline">
+      <xacro:cbox x="0" y="${ width/2 + 0.04}" z="0.06" sx="${blen}" sy="0.05" sz="0.12" mat="beam_orange"/>
+      <xacro:cbox x="0" y="${-width/2 - 0.04}" z="0.06" sx="${blen}" sy="0.05" sz="0.12" mat="beam_orange"/>
+      <xacro:cbox x="${blen/2 + 0.05}" y="0" z="0.1" sx="0.1" sy="${width + 0.13}" sz="0.2" mat="zone_red"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <joint name="conveyor_incline_joint" type="fixed">
+      <parent link="warehouse_floor"/>
+      <child link="conveyor_incline"/>
+      <origin xyz="${x} ${(y_lo + y_hi)/2} ${(z_lo + z_hi)/2}" rpy="0 ${pitch} ${-pi/2}"/>
+    </joint>
+
+    <!-- Chan dung thang (cao dan theo doc) + ban cap hang o dau cao + o tuong -->
+    <link name="conveyor_legs">
+      <xacro:incline_leg_pair y="${y_lo + 0.4}"  x="0" w="${width}" h="${z_lo + drop*0.4/run - 0.1}"/>
+      <xacro:incline_leg_pair y="${y_lo + run/2}" x="0" w="${width}" h="${z_lo + drop/2 - 0.1}"/>
+      <xacro:incline_leg_pair y="${y_hi - 0.3}"  x="0" w="${width}" h="${z_hi - drop*0.3/run - 0.1}"/>
+      <!-- ban cap hang nam ngang o dau cao, noi voi lo cap hang tren tuong -->
+      <xacro:cbox x="0" y="${y_hi + 0.25}" z="${z_hi - 0.05}" sx="${width}" sy="0.5" sz="0.1" mat="steel"/>
+      <xacro:incline_leg_pair y="${y_hi + 0.3}" x="0" w="${width}" h="${z_hi - 0.1}"/>
+      <!-- lo cap hang (cua so toi tren tuong Bac) -->
+      <xacro:vbox x="0" y="${y_hi + 0.46}" z="${z_hi + 0.5}" sx="${width + 0.4}" sy="0.04" sz="1.0" mat="chute_dark"/>
+      <xacro:vbox x="0" y="${y_hi + 0.45}" z="${z_hi + 1.05}" sx="${width + 0.6}" sy="0.06" sz="0.1" mat="hivis_orange"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="conveyor_legs" x="${x}" y="0" z="0"/>
+  </xacro:macro>
+
+  <xacro:macro name="incline_leg_pair" params="x y w h">
+    <xacro:cbox x="${x + w/2 - 0.03}" y="${y}" z="${h/2}" sx="0.06" sy="0.06" sz="${h}" mat="steel"/>
+    <xacro:cbox x="${x - w/2 + 0.03}" y="${y}" z="${h/2}" sx="0.06" sy="0.06" sz="${h}" mat="steel"/>
+  </xacro:macro>
+
+  <!-- ===== Chong hang tren pallet: layers tang, moi tang 2x2 thung ===== -->
+  <xacro:macro name="pallet_stack" params="name x y layers yaw:=0">
+    <link name="${name}">
+      <xacro:vbox x="0" y="0" z="0.075" sx="1.2" sy="1.0" sz="0.15" mat="pallet_wood"/>
+      <xacro:stack_layer layers="${layers}"/>
+      <collision>
+        <origin xyz="0 0 ${(0.15 + layers*0.45)/2}"/>
+        <geometry><box size="1.2 1.0 ${0.15 + layers*0.45}"/></geometry>
+      </collision>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+  <xacro:macro name="stack_layer" params="layers k:=0">
+    <xacro:if value="${k &lt; layers}">
+      <xacro:property name="zc" value="${0.15 + 0.225 + k*0.45}"/>
+      <xacro:vbox x="-0.29" y="-0.24" z="${zc}" sx="0.57" sy="0.47" sz="0.44" mat="${'carton' if k % 2 == 0 else 'carton_dark'}"/>
+      <xacro:vbox x=" 0.29" y="-0.24" z="${zc}" sx="0.57" sy="0.47" sz="0.44" mat="${'carton_dark' if k % 2 == 0 else 'carton'}"/>
+      <xacro:vbox x="-0.29" y=" 0.24" z="${zc}" sx="0.57" sy="0.47" sz="0.44" mat="${'carton_dark' if k % 2 == 0 else 'carton'}"/>
+      <xacro:vbox x=" 0.29" y=" 0.24" z="${zc}" sx="0.57" sy="0.47" sz="0.44" mat="${'carton' if k % 2 == 0 else 'carton_dark'}"/>
+      <xacro:stack_layer layers="${layers}" k="${k + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Cot chong hang theo truc Y: n vi tri cach nhau 'step', vi tri nam trong
+       'empty' (list chi so) de pallet trong cho robot xep hang vao. -->
+  <xacro:macro name="stack_column" params="prefix x y0 n step empty seed i:=0">
+    <xacro:if value="${i &lt; n}">
+      <xacro:if value="${i in empty}">
+        <xacro:pallet_empty name="${prefix}_${i}" x="${x}" y="${y0 + i*step}" yaw="${pi/2}"/>
+      </xacro:if>
+      <xacro:unless value="${i in empty}">
+        <xacro:pallet_stack name="${prefix}_${i}" x="${x}" y="${y0 + i*step}" yaw="${pi/2}"
+                            layers="${1 + (seed + i*5) % 4}"/>
+      </xacro:unless>
+      <xacro:stack_column prefix="${prefix}" x="${x}" y0="${y0}" n="${n}" step="${step}"
+                          empty="${empty}" seed="${seed}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Day ke theo truc Y (o ke xoay 90 do) -->
+  <xacro:macro name="rack_row_y" params="prefix n x y_start depth seed:=0 idx:=0">
+    <xacro:if value="${idx &lt; n}">
+      <xacro:rack_bay name="${prefix}_bay${idx}" x="${x}"
+                      y="${y_start + bay_length/2 + idx*bay_length}"
+                      depth="${depth}" seed="${seed + idx*7}" yaw="${pi/2}"/>
+      <xacro:rack_row_y prefix="${prefix}" n="${n}" x="${x}" y_start="${y_start}"
+                        depth="${depth}" seed="${seed}" idx="${idx + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- ===== Do vat kieu kho AWS ===== -->
+  <xacro:macro name="desk" params="name x y yaw:=0">
+    <link name="${name}">
+      <xacro:cbox x="0" y="0" z="0.76" sx="1.8" sy="0.8" sz="0.04" mat="desk_top"/>
+      <xacro:cbox x=" 0.85" y=" 0.35" z="0.37" sx="0.05" sy="0.05" sz="0.74" mat="steel"/>
+      <xacro:cbox x="-0.85" y=" 0.35" z="0.37" sx="0.05" sy="0.05" sz="0.74" mat="steel"/>
+      <xacro:cbox x=" 0.85" y="-0.35" z="0.37" sx="0.05" sy="0.05" sz="0.74" mat="steel"/>
+      <xacro:cbox x="-0.85" y="-0.35" z="0.37" sx="0.05" sy="0.05" sz="0.74" mat="steel"/>
+      <xacro:vbox x="0.3" y="0.2" z="1.0" sx="0.55" sy="0.04" sz="0.35" mat="screen_black"/>
+      <xacro:vbox x="0.3" y="0.22" z="0.8" sx="0.08" sy="0.08" sz="0.06" mat="screen_black"/>
+      <xacro:vbox x="-0.4" y="-0.05" z="0.88" sx="0.4" sy="0.3" sz="0.2" mat="carton"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_prop" params="name x y r h mat">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 ${h/2}"/>
+        <geometry><cylinder radius="${r}" length="${h}"/></geometry>
+        <xacro:mat n="${mat}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${h/2}"/>
+        <geometry><cylinder radius="${r}" length="${h}"/></geometry>
+      </collision>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0"/>
+  </xacro:macro>
+
+  <xacro:macro name="pallet_jack" params="name x y yaw:=0">
+    <link name="${name}">
+      <xacro:cbox x="0.15" y=" 0.2" z="0.05" sx="1.15" sy="0.16" sz="0.08" mat="hivis_orange"/>
+      <xacro:cbox x="0.15" y="-0.2" z="0.05" sx="1.15" sy="0.16" sz="0.08" mat="hivis_orange"/>
+      <xacro:cbox x="-0.55" y="0" z="0.2" sx="0.25" sy="0.56" sz="0.35" mat="hivis_orange"/>
+      <xacro:vbox x="-0.75" y="0" z="0.75" sx="0.04" sy="0.04" sz="1.0" mat="hazard_black" p="-0.35"/>
+      <xacro:vbox x="-0.92" y="0" z="1.22" sx="0.04" sy="0.3" sz="0.04" mat="hazard_black"/>
+      <xacro:dummy_inertial/>
+    </link>
+    <xacro:fixed_to_floor child="${name}" x="${x}" y="${y}" z="0" yaw="${yaw}"/>
+  </xacro:macro>
+
+</robot>

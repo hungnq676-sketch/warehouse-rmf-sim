@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<!--
+  ROBOT AMR CHO KHO (vi sai 2 banh + 2 banh tu do, lidar 360, khay cho hang)
+
+    xacro amr.urdf.xacro name:=amr1 color:="0.9 0.3 0.1 1"
+
+  Topic Gazebo (bridge sang ROS trong kho_rmf.launch.py):
+    /model/<name>/cmd_vel      (vao)  van toc
+    /model/<name>/odometry     (ra)   odom
+    /model/<name>/tf           (ra)   TF odom -> base_link
+    /model/<name>/scan         (ra)   lidar
+    /model/<name>/joint_states (ra)   goc banh xe
+  Kich thuoc: than tron R = 0.3 m, cao toi khay 0.42 m, cho thung 0.4 m tren khay.
+  Lidar o z = 0.32 m, nam giua than va khay; 4 tru do khay nam trong
+  khoang min range 0.3 m nen lidar bo qua.
+-->
+<robot name="amr" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="name"  default="amr1"/>
+  <xacro:arg name="color" default="0.95 0.45 0.05 1"/>
+  <xacro:property name="ns" value="$(arg name)"/>
+
+  <xacro:property name="body_r"  value="0.3"/>
+  <xacro:property name="body_z0" value="0.06"/>   <!-- day than -->
+  <xacro:property name="body_z1" value="0.28"/>   <!-- nap than -->
+  <xacro:property name="wheel_r" value="0.08"/>
+  <xacro:property name="wheel_w" value="0.04"/>
+  <xacro:property name="wheel_y" value="0.22"/>   <!-- 1/2 khoang cach 2 banh -->
+  <xacro:property name="tray_z"  value="0.41"/>
+
+  <xacro:macro name="cyl_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r + h*h)/12}" ixy="0" ixz="0"
+               iyy="${m*(3*r*r + h*h)/12}" iyz="0" izz="${m*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ===== Than (base_link o mat dat, giua 2 banh) ===== -->
+  <link name="base_link">
+    <xacro:cyl_inertia m="20.0" r="${body_r}" h="${body_z1 - body_z0}"/>
+    <!-- than trang -->
+    <visual>
+      <origin xyz="0 0 ${(body_z0 + body_z1)/2}"/>
+      <geometry><cylinder radius="${body_r}" length="${body_z1 - body_z0}"/></geometry>
+      <material name="body"><color rgba="0.92 0.92 0.92 1"/></material>
+    </visual>
+    <!-- vong mau nhan dien robot -->
+    <visual>
+      <origin xyz="0 0 ${body_z1 - 0.04}"/>
+      <geometry><cylinder radius="${body_r + 0.005}" length="0.04"/></geometry>
+      <material name="${ns}_band"><color rgba="$(arg color)"/></material>
+    </visual>
+    <!-- mui ten chi huong phia truoc -->
+    <visual>
+      <origin xyz="${body_r - 0.06} 0 ${body_z1 + 0.003}"/>
+      <geometry><box size="0.1 0.06 0.006"/></geometry>
+      <material name="front"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${(body_z0 + body_z1)/2}"/>
+      <geometry><cylinder radius="${body_r}" length="${body_z1 - body_z0}"/></geometry>
+    </collision>
+
+    <!-- 4 tru + khay cho hang co vien -->
+    <xacro:macro name="post" params="x y">
+      <visual>
+        <origin xyz="${x} ${y} ${(body_z1 + tray_z)/2}"/>
+        <geometry><cylinder radius="0.012" length="${tray_z - body_z1}"/></geometry>
+        <material name="post"><color rgba="0.3 0.3 0.32 1"/></material>
+      </visual>
+    </xacro:macro>
+    <xacro:post x=" 0.18" y=" 0.18"/>
+    <xacro:post x=" 0.18" y="-0.18"/>
+    <xacro:post x="-0.18" y=" 0.18"/>
+    <xacro:post x="-0.18" y="-0.18"/>
+    <xacro:macro name="tray_part" params="x y z sx sy sz">
+      <visual>
+        <origin xyz="${x} ${y} ${z}"/>
+        <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+        <material name="tray"><color rgba="0.25 0.27 0.30 1"/></material>
+      </visual>
+      <collision>
+        <origin xyz="${x} ${y} ${z}"/>
+        <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+      </collision>
+    </xacro:macro>
+    <xacro:tray_part x="0" y="0" z="${tray_z}" sx="0.5" sy="0.5" sz="0.02"/>
+    <xacro:tray_part x=" 0.24" y="0" z="${tray_z + 0.035}" sx="0.02" sy="0.5" sz="0.05"/>
+    <xacro:tray_part x="-0.24" y="0" z="${tray_z + 0.035}" sx="0.02" sy="0.5" sz="0.05"/>
+    <xacro:tray_part x="0" y=" 0.24" z="${tray_z + 0.035}" sx="0.5" sy="0.02" sz="0.05"/>
+    <xacro:tray_part x="0" y="-0.24" z="${tray_z + 0.035}" sx="0.5" sy="0.02" sz="0.05"/>
+  </link>
+
+  <gazebo reference="base_link">
+    <mu1>0.9</mu1>
+    <mu2>0.9</mu2>
+  </gazebo>
+
+  <!-- ===== 2 banh chu dong ===== -->
+  <xacro:macro name="wheel" params="side y">
+    <link name="${side}_wheel">
+      <xacro:cyl_inertia m="1.0" r="${wheel_r}" h="${wheel_w}"/>
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_r}" length="${wheel_w}"/></geometry>
+        <material name="tyre"><color rgba="0.1 0.1 0.1 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_r}" length="${wheel_w}"/></geometry>
+      </collision>
+    </link>
+    <joint name="${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${side}_wheel"/>
+      <origin xyz="0 ${y} ${wheel_r}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+    <gazebo reference="${side}_wheel">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:wheel side="left"  y="${ wheel_y}"/>
+  <xacro:wheel side="right" y="${-wheel_y}"/>
+
+  <!-- ===== 2 banh tu do (truoc / sau), khong ma sat ===== -->
+  <xacro:macro name="caster" params="name x">
+    <link name="${name}">
+      <inertial>
+        <mass value="0.2"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+      <visual>
+        <geometry><sphere radius="0.04"/></geometry>
+        <material name="tyre"><color rgba="0.1 0.1 0.1 1"/></material>
+      </visual>
+      <collision>
+        <geometry><sphere radius="0.04"/></geometry>
+      </collision>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}"/>
+      <origin xyz="${x} 0 0.04"/>
+    </joint>
+    <gazebo reference="${name}">
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:caster name="caster_front" x=" 0.2"/>
+  <xacro:caster name="caster_back"  x="-0.2"/>
+
+  <!-- ===== Lidar 360 do ===== -->
+  <link name="lidar_link">
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+    <visual>
+      <geometry><cylinder radius="0.05" length="0.05"/></geometry>
+      <material name="lidar"><color rgba="0.15 0.15 0.15 1"/></material>
+    </visual>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.32"/>
+  </joint>
+
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_lidar">
+      <topic>/model/${ns}/scan</topic>
+      <gz_frame_id>lidar_link</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+      <visualize>false</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.3</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- ===== Plugin Gazebo ===== -->
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${2*wheel_y}</wheel_separation>
+      <wheel_radius>${wheel_r}</wheel_radius>
+      <max_linear_acceleration>1.0</max_linear_acceleration>
+      <min_linear_acceleration>-1.0</min_linear_acceleration>
+      <max_angular_acceleration>2.0</max_angular_acceleration>
+      <min_angular_acceleration>-2.0</min_angular_acceleration>
+      <topic>/model/${ns}/cmd_vel</topic>
+      <odom_topic>/model/${ns}/odometry</odom_topic>
+      <tf_topic>/model/${ns}/tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <odom_publish_frequency>30</odom_publish_frequency>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>/model/${ns}/joint_states</topic>
+    </plugin>
+  </gazebo>
+
+</robot>
